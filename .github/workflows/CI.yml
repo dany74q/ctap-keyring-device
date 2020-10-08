@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
     - '**.py'
+    - '**.cfg'
+    - '**.ini'
+    - '**.toml'
 
 jobs:
   build:
