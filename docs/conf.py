@@ -5,12 +5,7 @@ import sys
 
 sys.path.append(os.path.abspath('..'))
 
-extensions = [
-    'sphinx.ext.autodoc',
-    'jaraco.packaging.sphinx',
-    'rst.linker',
-    'sphinx.ext.autosummary',
-]
+extensions = ['sphinx.ext.autodoc', 'jaraco.packaging.sphinx', 'rst.linker']
 autoapi_type = 'python'
 autoapi_dirs = ['../ctap_keyring_device']
 
