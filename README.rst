@@ -110,6 +110,25 @@ See examples in ``ctap-keyring-device/tests``.
 
 |
 
+CTAP Flow Diagrams
+==================
+
+Make Credential Flow
+********************
+
+.. image:: images/make-credential-flow.png
+  :alt: Make Credential Flow
+
+|
+
+Get Assertion Flow
+******************
+
+.. image:: images/get-assertion-flow.png
+   :alt: Get Assertion Flow
+
+|
+
 Security Considerations
 =======================
 

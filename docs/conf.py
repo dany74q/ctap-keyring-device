@@ -18,6 +18,7 @@ autodoc_mock_imports = [
     'Security',
     'LocalAuthentication',
     'cbor',
+    'winrt',
 ]
 
 link_files = {

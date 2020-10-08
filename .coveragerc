@@ -1,8 +1,7 @@
 [run]
 omit =
     .tox/*
-    ctap_keyring_device/touch_id_helpers.py
-    ctap_keyring_device/windows_hello_helpers.py
+    ctap_keyring_device/user_verifiers/*
 
 branch = True
 

@@ -3,24 +3,26 @@
 # Taken from and slightly modified:
 # https://raw.githubusercontent.com/lukaskollmer/python-touch-id/master/touchid.py (MIT License)
 
-# noinspection PyUnresolvedReferences
-from LocalAuthentication import LAContext, LAPolicyDeviceOwnerAuthentication
 from threading import Event
 
+# noinspection PyUnresolvedReferences
+from LocalAuthentication import LAContext, LAPolicyDeviceOwnerAuthentication
 
-class TouchId:
+from ctap_keyring_device.user_verifiers.ctap_user_verifier import CtapUserVerifierBase
+
+
+class TouchIdCtapUserVerifier(CtapUserVerifierBase):
+    """ A Touch ID based CTAP User Verifier - Prompts for the user's login password / fingerprint """
+
     LA_POLICY = LAPolicyDeviceOwnerAuthentication
 
     def __init__(self):
         self._context = LAContext.new()
 
-    def available(self) -> bool:
+    def _available(self) -> bool:
         return self._context.canEvaluatePolicy_error_(self.LA_POLICY, None)[0]
 
-    def verify(self, reason) -> bool:
-        if not self.available():
-            raise Exception("Touch ID isn't available on this machine")
-
+    def _verify_user(self, rp_id: str) -> bool:
         success, err, event = False, None, Event()
 
         def cb(_success, _error):
@@ -31,10 +33,9 @@ class TouchId:
 
             event.set()
 
-        self._context.evaluatePolicy_localizedReason_reply_(self.LA_POLICY, reason, cb)
+        self._context.evaluatePolicy_localizedReason_reply_(
+            self.LA_POLICY, 'verify ctap user identity of ' + rp_id, cb
+        )
 
         event.wait()
-        if err:
-            raise RuntimeError(err)
-
-        return success
+        return err is None and success

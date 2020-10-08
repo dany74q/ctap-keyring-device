@@ -33,7 +33,9 @@ from ctap_keyring_device.ctap_strucs import (
     Credential,
     CtapGetAssertionRequest,
 )
-from ctap_keyring_device.ctap_user_verifiers import CtapUserVerifier
+from ctap_keyring_device.user_verifiers.ctap_user_verifier_factory import (
+    CtapUserVerifierFactory,
+)
 
 
 class CtapKeyringDevice(ctap.CtapDevice):
@@ -92,7 +94,7 @@ class CtapKeyringDevice(ctap.CtapDevice):
         )
 
         self._next_assertions_ctx: Optional[CtapGetNextAssertionContext] = None
-        self._user_verifier = CtapUserVerifier.create()
+        self._user_verifier = CtapUserVerifierFactory.create()
 
     @classmethod
     def list_devices(cls):
