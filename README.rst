@@ -44,6 +44,7 @@ Run the following (on a darwin machine)::
 
 
 |
+
 Using This Library
 ==================
 
@@ -73,6 +74,7 @@ Make Credential Flow
     attestation, client_data = client.make_credential(options)
 
 |
+
 Get Assertion Flow
 ******************
 .. code-block:: python
@@ -103,9 +105,11 @@ Get Assertion Flow
     assertions, client_data = client.get_assertion(options)
 
 |
+
 See examples in ``ctap-keyring-device/tests``.
 
 |
+
 Security Considerations
 =======================
 
@@ -131,6 +135,7 @@ in order to trigger a 2nd factor before returning an assertion; Touch-ID / Passw
 is used on OSX, and Windows-Hello on Windows.
 
 |
+
 Making Releases
 ===============
 
@@ -139,6 +144,7 @@ will be automatically deployed to github;
 When a release is tagged, it will be automatically deployed to pypi.
 
 |
+
 Running Tests
 =============
 
