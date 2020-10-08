@@ -1,0 +1,5 @@
+sphinx >= 3.2.1
+jaraco.packaging >= 3.2
+rst.linker >= 2.0.0
+keyring >= 21.4.0
+sphinx-autoapi >= 1.5.1

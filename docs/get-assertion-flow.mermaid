@@ -1,0 +1,22 @@
+sequenceDiagram
+    Client->>Device: GetAssertion
+    Note over Client,Device: allow-list=[credential-id='<some-cred>']
+
+    opt user verification required
+        Device-->>Touch ID / Windows Hello: User Prompt
+        alt failed
+            Touch ID / Windows Hello-->>Device: Verification failed
+            Device-->>Client: Ctap Error NOT_ALLOWED
+        end
+    end
+
+    Device-->>Keyring: Find credentials by ID
+    alt not found
+        Keyring-->>Device: No credentials found
+        Device-->>Client: Ctap Error NO_CREDENTIALS
+    end
+
+    Keyring-->>Device: Encrypted credential
+    Note over Device: 1. Decrypt credential using last part of credential ID
+    Note over Device: 2. Sign authenticator-data + client-data-hash
+    Device->>Client: AssertionResponse
