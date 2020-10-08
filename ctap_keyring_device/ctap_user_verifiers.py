@@ -10,9 +10,9 @@ except Exception:
 
 # noinspection PyBroadException
 try:
-    from ctap_keyring_device.touch_id_helpers import touch_id_verify, touch_id_available
+    from ctap_keyring_device.touch_id_helpers import TouchId
 except Exception:
-    touch_id_verify, touch_id_available = None, None
+    TouchId = None
 
 
 class CtapUserVerifier(metaclass=abc.ABCMeta):
@@ -22,9 +22,8 @@ class CtapUserVerifier(metaclass=abc.ABCMeta):
     This could be with biometrics, face-recognition, password prompt, or otherwise.
     """
 
-    @classmethod
     @abc.abstractmethod
-    def available(cls) -> bool:
+    def available(self) -> bool:
         """ If set, this verifier is available on the current OS """
         raise NotImplementedError()
 
@@ -36,11 +35,15 @@ class CtapUserVerifier(metaclass=abc.ABCMeta):
     @staticmethod
     def create():
         system = platform.system()
-        if system == 'Darwin' and TouchIdCtapUserVerifier.available():
-            return TouchIdCtapUserVerifier()
+        if system == 'Darwin':
+            touch_id_verifier = TouchIdCtapUserVerifier()
+            if touch_id_verifier.available():
+                return touch_id_verifier
 
-        if system == 'Windows' and WindowsHelloCtapUserVerifier.available():
-            return WindowsHelloCtapUserVerifier()
+        if system == 'Windows':
+            windows_hello_verifier = WindowsHelloCtapUserVerifier()
+            if windows_hello_verifier.available():
+                return windows_hello_verifier
 
         return NoopCtapUserVerifier()
 
@@ -48,8 +51,7 @@ class CtapUserVerifier(metaclass=abc.ABCMeta):
 class NoopCtapUserVerifier(CtapUserVerifier):
     """ Dummy verifier - always returns true """
 
-    @classmethod
-    def available(cls) -> bool:
+    def available(self) -> bool:
         return True
 
     def verify_user(self, rp_id: str) -> bool:
@@ -59,14 +61,19 @@ class NoopCtapUserVerifier(CtapUserVerifier):
 class TouchIdCtapUserVerifier(CtapUserVerifier):
     """ OSX Touch-ID based user verifier, prompts for a touch id / password """
 
-    @classmethod
-    def available(cls) -> bool:
-        return touch_id_available is not None and touch_id_available()
+    def __init__(self):
+        self._touch_id = TouchId() if TouchId else None
+
+    def available(self) -> bool:
+        return self._touch_id is not None and self._touch_id.available()
 
     def verify_user(self, rp_id: str) -> bool:
+        if self._touch_id is None:
+            return False
+
         # noinspection PyBroadException
         try:
-            return touch_id_verify('verify ctap user identity of ' + rp_id)
+            return self._touch_id.verify('verify ctap user identity of ' + rp_id)
         except Exception:
             return False
 
@@ -74,14 +81,19 @@ class TouchIdCtapUserVerifier(CtapUserVerifier):
 class WindowsHelloCtapUserVerifier(CtapUserVerifier):
     """ Windows Hello based user verifier, prompts for a biometric / pin """
 
-    @classmethod
-    def available(cls) -> bool:
-        return WindowsHello is not None
+    def __init__(self):
+        self._wh = WindowsHello() if WindowsHello else None
+
+    def available(self) -> bool:
+        return self._wh is not None and self._wh.available() and self._wh.open()
 
     def verify_user(self, rp_id: str) -> bool:
+        if self._wh is None:
+            return False
+
         # noinspection PyBroadException
         try:
-            with WindowsHello() as wh:
+            with self._wh as wh:
                 return wh.verify()
         except Exception:
             return False

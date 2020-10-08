@@ -13,11 +13,10 @@ WINBIO_TYPE_FINGERPRINT = 0x00000008
 WINBIO_POOL_SYSTEM = 0x00000001
 WINBIO_FLAG_DEFAULT = 0x00000000
 WINBIO_ID_TYPE_SID = 3
-
-# Error Info
 WINBIO_E_NO_MATCH = 0x80098005
+WINBIO_FINGER_UNSPECIFIED_POS_01 = ctypes.c_ubyte(0xF5)
 
-lib = ctypes.WinDLL(r"C:\Windows\System32\winbio.dll")
+winbio = ctypes.WinDLL(r"C:\Windows\System32\winbio.dll")
 
 
 class GUID(ctypes.Structure):
@@ -88,9 +87,8 @@ class WindowsHello:
         self.session_handle = ctypes.c_uint32()
         self.unit_id = ctypes.c_uint32()
 
-        # important  represent which finger you are using
         # full definition is in winbio_types.h
-        self.subfactor = ctypes.c_ubyte(0xF5)  # WINBIO_FINGER_UNSPECIFIED_POS_01
+        self.subfactor = WINBIO_FINGER_UNSPECIFIED_POS_01
 
         # WINBIO_ID_TYPE_SID = 3
         self.identity = WINBIO_IDENTITY()
@@ -104,12 +102,24 @@ class WindowsHello:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    @classmethod
+    def available(cls):
+        if winbio is None:
+            return False
+
+        enabled = wintypes.BOOLEAN()
+        source = wintypes.ULONG()
+        res = winbio.WinBioGetEnabledSetting(
+            ctypes.byref(enabled), ctypes.byref(source)
+        )
+        return res == 0 and enabled
+
     def open(self):
         if self.is_open:
             return
 
-        ret = lib.WinBioOpenSession(
-            WINBIO_TYPE_FINGERPRINT,  # finger print
+        res = winbio.WinBioOpenSession(
+            WINBIO_TYPE_FINGERPRINT,
             WINBIO_POOL_SYSTEM,
             WINBIO_FLAG_DEFAULT,
             None,
@@ -117,26 +127,26 @@ class WindowsHello:
             None,
             ctypes.byref(self.session_handle),
         )  # pool   system
-        if ret & 0xFFFFFFFF != 0x0:
+        if res != 0:
             return False
 
         self.is_open = True
         return True
 
     def locate_unit(self):
-        ret = lib.WinBioLocateSensor(self.session_handle, ctypes.byref(self.unit_id))
-        return ret & 0xFFFFFFFF == 0x0
+        res = winbio.WinBioLocateSensor(self.session_handle, ctypes.byref(self.unit_id))
+        return res == 0
 
     def identify(self):
         reject_detail = ctypes.c_uint32()
-        ret = lib.WinBioIdentify(
+        res = winbio.WinBioIdentify(
             self.session_handle,
             ctypes.byref(self.unit_id),
             ctypes.byref(self.identity),
             ctypes.byref(self.subfactor),
             ctypes.byref(reject_detail),
         )
-        if ret & 0xFFFFFFFF != 0x0:
+        if res != 0:
             raise Exception("Identify Error")
 
     def verify(self):
@@ -144,7 +154,7 @@ class WindowsHello:
         reject_detail = ctypes.c_uint32()
         # get identity
         self.get_current_user_identity()
-        ret = lib.WinBioVerify(
+        res = winbio.WinBioVerify(
             self.session_handle,
             ctypes.byref(self.identity),
             self.subfactor,
@@ -152,7 +162,7 @@ class WindowsHello:
             ctypes.byref(match),
             ctypes.byref(reject_detail),
         )
-        if ret & 0xFFFFFFFF == WINBIO_E_NO_MATCH or ret & 0xFFFFFFFF == 0:
+        if res == 0 or (res & 0xFFFFFFFF) == WINBIO_E_NO_MATCH:
             return match.value
         else:
             raise Exception("Identify Error")
@@ -161,8 +171,9 @@ class WindowsHello:
         if not self.is_open:
             return
 
-        lib.WinBioCloseSession(self.session_handle)
+        winbio.WinBioCloseSession(self.session_handle)
         self.session_handle = 0
+        self.is_open = False
 
     def get_current_user_identity(self):
         self.get_token_information()

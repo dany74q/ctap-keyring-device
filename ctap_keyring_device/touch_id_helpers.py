@@ -8,36 +8,33 @@ from LocalAuthentication import LAContext, LAPolicyDeviceOwnerAuthentication
 from threading import Event
 
 
-def touch_id_available():
-    context = LAContext.new()
-    return context.canEvaluatePolicy_error_(LAPolicyDeviceOwnerAuthentication, None)[0]
+class TouchId:
+    LA_POLICY = LAPolicyDeviceOwnerAuthentication
 
+    def __init__(self):
+        self._context = LAContext.new()
 
-def touch_id_verify(reason):
-    context = LAContext.new()
+    def available(self) -> bool:
+        return self._context.canEvaluatePolicy_error_(self.LA_POLICY, None)[0]
 
-    can_evaluate = context.canEvaluatePolicy_error_(
-        LAPolicyDeviceOwnerAuthentication, None
-    )[0]
-    if not can_evaluate:
-        raise Exception("Touch ID isn't available on this machine")
+    def verify(self, reason) -> bool:
+        if not self.available():
+            raise Exception("Touch ID isn't available on this machine")
 
-    success, err, event = False, None, Event()
+        success, err, event = False, None, Event()
 
-    def cb(_success, _error):
-        nonlocal success, err
-        success = _success
-        if _error:
-            err = _error.localizedDescription()
+        def cb(_success, _error):
+            nonlocal success, err
+            success = _success
+            if _error:
+                err = _error.localizedDescription()
 
-        event.set()
+            event.set()
 
-    context.evaluatePolicy_localizedReason_reply_(
-        LAPolicyDeviceOwnerAuthentication, reason, cb
-    )
+        self._context.evaluatePolicy_localizedReason_reply_(self.LA_POLICY, reason, cb)
 
-    event.wait()
-    if err:
-        raise RuntimeError(err)
+        event.wait()
+        if err:
+            raise RuntimeError(err)
 
-    return success
+        return success
