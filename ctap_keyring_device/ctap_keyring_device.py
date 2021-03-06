@@ -21,7 +21,11 @@ from fido2.ctap2 import (
     AttestationObject,
     AssertionResponse,
 )
-from fido2.webauthn import PublicKeyCredentialDescriptor
+from fido2.webauthn import (
+    PublicKeyCredentialDescriptor,
+    PublicKeyCredentialType,
+    PublicKeyCredentialUserEntity,
+)
 from keyring.backends.fail import Keyring as FailKeyring
 
 from ctap_keyring_device.ctap_credential_maker import CtapCredentialMaker
@@ -70,13 +74,13 @@ class CtapKeyringDevice(ctap.CtapDevice):
     AAGUID = b'pasten-ctap-1337'
 
     def __init__(self):
-        self.capabilities = ctap2.CAPABILITY.CBOR
+        self.capabilities = hid.CAPABILITY.CBOR
 
         self._ctap2_cmd_to_handler = {
-            ctap2.CTAP2.CMD.MAKE_CREDENTIAL: self.make_credential,
-            ctap2.CTAP2.CMD.GET_ASSERTION: self.get_assertion,
-            ctap2.CTAP2.CMD.GET_NEXT_ASSERTION: self.get_next_assertion,
-            ctap2.CTAP2.CMD.GET_INFO: self.get_info,
+            ctap2.Ctap2.CMD.MAKE_CREDENTIAL: self.make_credential,
+            ctap2.Ctap2.CMD.GET_ASSERTION: self.get_assertion,
+            ctap2.Ctap2.CMD.GET_NEXT_ASSERTION: self.get_next_assertion,
+            ctap2.Ctap2.CMD.GET_INFO: self.get_info,
         }
 
         self._info = ctap2.Info.create(
@@ -133,7 +137,7 @@ class CtapKeyringDevice(ctap.CtapDevice):
         if not data:
             raise CtapError(CtapError.ERR.INVALID_PARAMETER)
 
-        ctap2_cmd = ctap2.CTAP2.CMD.from_bytes(data[:1], 'big')
+        ctap2_cmd = ctap2.Ctap2.CMD.from_bytes(data[:1], 'big')
         handler = self._ctap2_cmd_to_handler.get(ctap2_cmd)
         if not handler:
             raise CtapError(CtapError.ERR.INVALID_COMMAND)
@@ -340,7 +344,11 @@ class CtapKeyringDevice(ctap.CtapDevice):
             authenticator_data, request.client_data_hash, cred.private_key
         )
         response = AssertionResponse.create(
-            cred.id, authenticator_data, signature, n_creds=len(ctx.creds)
+            PublicKeyCredentialDescriptor(PublicKeyCredentialType.PUBLIC_KEY, cred.id),
+            authenticator_data,
+            signature,
+            user=PublicKeyCredentialUserEntity(cred.user_id, name=''),
+            n_creds=len(ctx.creds),
         )
         return response
 
