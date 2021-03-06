@@ -5,7 +5,7 @@ from typing import Optional, List
 from uuid import uuid4
 
 import keyring
-from fido2 import ctap2, webauthn, cose, cbor
+from fido2 import ctap2, webauthn, cose, cbor, hid
 from fido2.attestation import PackedAttestation
 from fido2.client import ClientData, WEBAUTHN_TYPE
 from fido2.ctap import CtapError
@@ -55,7 +55,7 @@ class TestCtapKeyringDevice(unittest.TestCase):
         keyring.set_keyring(self._keyring)
 
     def test_capabilities_include_cbor(self):
-        assert self._dev.capabilities & ctap2.CAPABILITY.CBOR
+        assert self._dev.capabilities & hid.CAPABILITY.CBOR
 
     def test_info(self):
         info = self._dev.get_info()
@@ -266,21 +266,21 @@ class TestCtapKeyringDevice(unittest.TestCase):
 
     def test_failure_on_unsupported_ctap_cmd(self):
         res = self._dev.call(
-            CTAPHID.CBOR, data=ctap2.CTAP2.CMD.CLIENT_PIN.to_bytes(1, 'big')
+            CTAPHID.CBOR, data=ctap2.Ctap2.CMD.CLIENT_PIN.to_bytes(1, 'big')
         )
         assert res == CtapError.ERR.INVALID_COMMAND.to_bytes(1, 'big')
 
     def test_failure_on_malformed_cbor_data(self):
         res = self._dev.call(
             CTAPHID.CBOR,
-            data=ctap2.CTAP2.CMD.MAKE_CREDENTIAL.to_bytes(1, 'big') + b'malformed',
+            data=ctap2.Ctap2.CMD.MAKE_CREDENTIAL.to_bytes(1, 'big') + b'malformed',
         )
         assert res == CtapError.ERR.INVALID_CBOR.to_bytes(1, 'big')
 
     def test_failure_on_non_dict_cbor_data(self):
         res = self._dev.call(
             CTAPHID.CBOR,
-            data=ctap2.CTAP2.CMD.MAKE_CREDENTIAL.to_bytes(1, 'big')
+            data=ctap2.Ctap2.CMD.MAKE_CREDENTIAL.to_bytes(1, 'big')
             + cbor.encode('str'),
         )
         assert res == CtapError.ERR.INVALID_CBOR.to_bytes(1, 'big')
