@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # noinspection PyUnresolvedReferences
-import winrt.windows.security.credentials.ui as ui
+import winsdk.windows.security.credentials.ui as ui
 import asyncio
 
 from ctap_keyring_device.user_verifiers.ctap_user_verifier import CtapUserVerifierBase
