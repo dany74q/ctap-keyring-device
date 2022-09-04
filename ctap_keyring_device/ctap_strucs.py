@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
+from timeit import default_timer as timer
 from typing import List
 
 from cryptography.hazmat.primitives import serialization
@@ -14,8 +15,6 @@ from fido2.webauthn import (
 
 from ctap_keyring_device.ctap_private_key_wrapper import CtapPrivateKeyWrapper
 
-from timeit import default_timer as timer
-
 
 class CtapOptions:
     PLATFORM_DEVICE = 'plat'
@@ -26,7 +25,7 @@ class CtapOptions:
 
 
 class Credential:
-    """ Represents a ctap-saved credential - with a credential id, private key, and a COSE algorithm. """
+    """Represents a ctap-saved credential - with a credential id, private key, and a COSE algorithm."""
 
     def __init__(self, credential_id: bytes, private_key: CtapPrivateKeyWrapper):
         self.id = credential_id
@@ -72,7 +71,7 @@ class Credential:
 
 
 class CtapMakeCredentialRequest:
-    """ Represents the cbor encoded MAKE_CREDENTIAL request """
+    """Represents the cbor encoded MAKE_CREDENTIAL request"""
 
     CLIENT_DATA_HASH_KEY = 1
     RP_KEY = 2
@@ -119,16 +118,16 @@ class CtapMakeCredentialRequest:
         # noinspection PyProtectedMember
         return CtapMakeCredentialRequest(
             client_data_hash=make_credential_request.get(cls.CLIENT_DATA_HASH_KEY),
-            rp=PublicKeyCredentialRpEntity._wrap(
+            rp=PublicKeyCredentialRpEntity.from_dict(
                 make_credential_request.get(cls.RP_KEY)
             ),
-            user=PublicKeyCredentialUserEntity._wrap(
-                make_credential_request.get(cls.USER_KEY)
+            user=PublicKeyCredentialUserEntity.from_dict(
+                make_credential_request.get(cls.USER_KEY),
             ),
-            public_key_credential_params=PublicKeyCredentialParameters._wrap_list(
+            public_key_credential_params=PublicKeyCredentialParameters._deserialize_list(
                 make_credential_request.get(cls.PUBLIC_KEY_CREDENTIAL_PARAMS_KEY)
             ),
-            exclude_list=PublicKeyCredentialDescriptor._wrap_list(
+            exclude_list=PublicKeyCredentialDescriptor._deserialize_list(
                 make_credential_request.get(cls.EXCLUDE_LIST_KEY)
             ),
             extensions=make_credential_request.get(cls.EXTENSIONS_KEY),
@@ -139,7 +138,7 @@ class CtapMakeCredentialRequest:
 
 
 class CtapGetAssertionRequest:
-    """ Represents the cbor encoded GET_ASSERTION request """
+    """Represents the cbor encoded GET_ASSERTION request"""
 
     RP_ID_KEY = 1
     CLIENT_DATA_HASH_KEY = 2
@@ -178,7 +177,7 @@ class CtapGetAssertionRequest:
         return CtapGetAssertionRequest(
             rp_id=get_assertion_req.get(cls.RP_ID_KEY),
             client_data_hash=get_assertion_req.get(cls.CLIENT_DATA_HASH_KEY),
-            allow_list=PublicKeyCredentialDescriptor._wrap_list(
+            allow_list=PublicKeyCredentialDescriptor._deserialize_list(
                 get_assertion_req.get(cls.ALLOW_LIST_KEY)
             ),
             extensions=get_assertion_req.get(cls.EXTENSIONS_KEY),

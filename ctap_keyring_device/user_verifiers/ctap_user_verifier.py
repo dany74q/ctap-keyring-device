@@ -27,12 +27,12 @@ class CtapUserVerifier(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def available(self) -> bool:
-        """ If set, this verifier is available on the current OS """
+        """If set, this verifier is available on the current OS"""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def verify_user(self, rp_id: str) -> bool:
-        """ Returns true if the user was successfully verified """
+        """Returns true if the user was successfully verified"""
         raise NotImplementedError()
 
 

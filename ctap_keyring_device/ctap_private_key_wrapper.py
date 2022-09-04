@@ -18,18 +18,18 @@ class CtapPrivateKeyWrapper(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_key(self):
-        """ Returns the wrapped private key """
+        """Returns the wrapped private key"""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def sign(self, data: bytes) -> bytes:
-        """ Signs the given data according to the algorithm """
+        """Signs the given data according to the algorithm"""
         raise NotImplementedError()
 
     @classmethod
     @abc.abstractmethod
     def get_algorithm(cls) -> int:
-        """ One of COSE defined algorithms, see https://www.iana.org/assignments/cose/cose.xhtml """
+        """One of COSE defined algorithms, see https://www.iana.org/assignments/cose/cose.xhtml"""
         raise NotImplementedError()
 
     def get_public_key(self):
@@ -63,7 +63,7 @@ class CtapPrivateKeyWrapper(metaclass=abc.ABCMeta):
 
 
 class CtapEs256PrivateKeyWrapper(CtapPrivateKeyWrapper):
-    """ ES256 (ECDSA w/ SHA-256) """
+    """ES256 (ECDSA w/ SHA-256)"""
 
     def __init__(self, key: ec.EllipticCurvePrivateKey = None):
         self._key = key or ec.generate_private_key(curve=ec.SECP256R1())
@@ -90,7 +90,7 @@ class CtapRsaPrivateKeyWrapper(CtapPrivateKeyWrapper, metaclass=abc.ABCMeta):
 
 
 class CtapRs256KeyGeneratorSigner(CtapRsaPrivateKeyWrapper):
-    """ RS256 (RSASSA-PKCS1-v1_5 w/ SHA-256) """
+    """RS256 (RSASSA-PKCS1-v1_5 w/ SHA-256)"""
 
     def sign(self, data: bytes) -> bytes:
         return self._key.sign(data, padding.PKCS1v15(), hashes.SHA256())
@@ -101,7 +101,7 @@ class CtapRs256KeyGeneratorSigner(CtapRsaPrivateKeyWrapper):
 
 
 class CtapRs1PrivateKeyWrapper(CtapRsaPrivateKeyWrapper):
-    """ RS1 (RSASSA-PKCS1-v1_5 w/ SHA-1) """
+    """RS1 (RSASSA-PKCS1-v1_5 w/ SHA-1)"""
 
     def sign(self, data: bytes) -> bytes:
         return self._key.sign(data, padding.PKCS1v15(), hashes.SHA1())
@@ -112,7 +112,7 @@ class CtapRs1PrivateKeyWrapper(CtapRsaPrivateKeyWrapper):
 
 
 class CtapPs256PrivateKeyWrapper(CtapRsaPrivateKeyWrapper):
-    """ PS256 (RSASSA-PSS w/ SHA-256) """
+    """PS256 (RSASSA-PSS w/ SHA-256)"""
 
     def sign(self, data: bytes) -> bytes:
         return self._key.sign(
@@ -129,7 +129,7 @@ class CtapPs256PrivateKeyWrapper(CtapRsaPrivateKeyWrapper):
 
 
 class CtapEdDsaPrivateKeyWrapper(CtapPrivateKeyWrapper):
-    """ EDDSA (Edwards-Curve DSA) """
+    """EDDSA (Edwards-Curve DSA)"""
 
     def __init__(self, key: Ed25519PrivateKey = None):
         self._key = key or ed25519.Ed25519PrivateKey.generate()

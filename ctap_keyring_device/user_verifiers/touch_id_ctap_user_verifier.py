@@ -12,7 +12,7 @@ from ctap_keyring_device.user_verifiers.ctap_user_verifier import CtapUserVerifi
 
 
 class TouchIdCtapUserVerifier(CtapUserVerifierBase):
-    """ A Touch ID based CTAP User Verifier - Prompts for the user's login password / fingerprint """
+    """A Touch ID based CTAP User Verifier - Prompts for the user's login password / fingerprint"""
 
     LA_POLICY = LAPolicyDeviceOwnerAuthentication
 

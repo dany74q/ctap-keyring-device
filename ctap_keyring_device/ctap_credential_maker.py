@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Type
+from typing import Type, Union
 from uuid import uuid4, uuid5, NAMESPACE_OID
 
 from fido2.cose import CoseKey
@@ -9,12 +9,12 @@ from ctap_keyring_device.ctap_strucs import Credential
 
 
 class CtapCredentialMaker:
-    """ This class makes a new credential (key-pair) from the given COSE key type """
+    """This class makes a new credential (key-pair) from the given COSE key type"""
 
     def __init__(self, cose_key_cls: Type[CoseKey]):
         self._cose_key_cls = cose_key_cls
 
-    def make_credential(self, user_id: str) -> Credential:
+    def make_credential(self, user_id: Union[str, bytes]) -> Credential:
         """
         Generates a new credential, with a 32-byte id consisting of:
         - uuid5(NAMESPACE_OID, user_id)
@@ -24,6 +24,9 @@ class CtapCredentialMaker:
         :return: A new credential holding a generated private key
         """
         assert user_id
+
+        if isinstance(user_id, bytes):
+            user_id = user_id.decode('utf-8')
 
         private_key = CtapPrivateKeyWrapper.create(self._cose_key_cls)
         key_password = uuid4().bytes

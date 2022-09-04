@@ -7,10 +7,10 @@ from uuid import uuid4
 import keyring
 from fido2 import ctap2, webauthn, cose, cbor, hid
 from fido2.attestation import PackedAttestation
-from fido2.client import ClientData, WEBAUTHN_TYPE
 from fido2.ctap import CtapError
 from fido2.hid import CTAPHID
 from fido2.utils import websafe_encode
+from fido2.webauthn import CollectedClientData
 from fido2.webauthn import (
     PublicKeyCredentialDescriptor,
     PublicKeyCredentialType,
@@ -31,6 +31,8 @@ from ctap_keyring_device.ctap_strucs import (
 
 class InMemKeyring(KeyringBackend):
     def __init__(self):
+        super().__init__()
+
         self.store = {}
 
     def get_password(self, service, username):
@@ -138,8 +140,8 @@ class TestCtapKeyringDevice(unittest.TestCase):
 
         assert attestation_object.fmt == PackedAttestation.FORMAT
 
-        assert 'alg' in attestation_object.att_statement
-        assert attestation_object.att_statement['alg'] == algorithm
+        assert 'alg' in attestation_object.att_stmt
+        assert attestation_object.att_stmt['alg'] == algorithm
 
         assert (
             attestation_object.auth_data.rp_id_hash
@@ -292,14 +294,13 @@ class TestCtapKeyringDevice(unittest.TestCase):
         user_name: str = 'pasten',
         rp_id: str = 'pasten.com',
         rp_name: str = 'Pasten LTD',
-        client_data: Optional[ClientData] = None,
+        client_data: Optional[CollectedClientData] = None,
         excluded_cred_ids: Optional[List[bytes]] = None,
     ) -> dict:
-
-        client_data = client_data or ClientData.build(
-            typ=WEBAUTHN_TYPE.MAKE_CREDENTIAL,
-            origin=rp_id,
+        client_data = client_data or CollectedClientData.create(
+            type=ctap2.Ctap2.CMD.MAKE_CREDENTIAL,
             challenge=websafe_encode(b'pasten-challenge'),
+            origin=rp_id,
         )
 
         req = {
@@ -307,10 +308,11 @@ class TestCtapKeyringDevice(unittest.TestCase):
                 client_data
             ).digest(),
             CtapMakeCredentialRequest.RP_KEY: PublicKeyCredentialRpEntity(
-                rp_id, rp_name
+                name=rp_name, id=rp_id
             ),
             CtapMakeCredentialRequest.USER_KEY: PublicKeyCredentialUserEntity(
-                user_id, user_name
+                name=user_name,
+                id=user_id.encode('utf-8'),
             ),
             CtapMakeCredentialRequest.PUBLIC_KEY_CREDENTIAL_PARAMS_KEY: [
                 PublicKeyCredentialParameters(
@@ -332,15 +334,15 @@ class TestCtapKeyringDevice(unittest.TestCase):
     @staticmethod
     def _get_assertion_request(
         rp_id: str = 'pasten.com',
-        client_data: Optional[ClientData] = None,
+        client_data: Optional[CollectedClientData] = None,
         allowed_cred_ids: Optional[List[bytes]] = None,
         user_verification_required=False,
     ) -> dict:
 
-        client_data = client_data or ClientData.build(
-            typ=WEBAUTHN_TYPE.GET_ASSERTION,
-            origin=rp_id,
+        client_data = client_data or CollectedClientData.create(
+            type=ctap2.Ctap2.CMD.GET_ASSERTION,
             challenge=websafe_encode(b'pasten-challenge'),
+            origin=rp_id,
         )
         req = {
             CtapGetAssertionRequest.RP_ID_KEY: rp_id,
