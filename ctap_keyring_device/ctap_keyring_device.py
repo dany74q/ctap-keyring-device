@@ -4,7 +4,7 @@ import time
 from hashlib import sha256
 from threading import Event
 from types import FunctionType
-from typing import List, Optional
+from typing import List, Optional, Mapping, Any
 
 import keyring
 from cryptography.hazmat.primitives import serialization
@@ -15,13 +15,11 @@ from fido2 import hid
 from fido2 import webauthn
 from fido2.attestation import PackedAttestation
 from fido2.ctap import CtapError
-from fido2.ctap2 import (
+from fido2.ctap2 import AssertionResponse, AttestationResponse, Info
+from fido2.webauthn import (
+    Aaguid,
     AttestedCredentialData,
     AuthenticatorData,
-    AttestationObject,
-    AssertionResponse,
-)
-from fido2.webauthn import (
     PublicKeyCredentialDescriptor,
     PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
@@ -71,11 +69,9 @@ class CtapKeyringDevice(ctap.CtapDevice):
 
     SUPPORTED_CTAP_VERSIONS = ['FIDO_2_0']
     MAX_MSG_SIZE = 1 << 20
-    AAGUID = b'pasten-ctap-1337'
+    AAGUID = Aaguid(b'pasten-ctap-1337')
 
     def __init__(self):
-        self.capabilities = hid.CAPABILITY.CBOR
-
         self._ctap2_cmd_to_handler = {
             ctap2.Ctap2.CMD.MAKE_CREDENTIAL: self.make_credential,
             ctap2.Ctap2.CMD.GET_ASSERTION: self.get_assertion,
@@ -83,15 +79,18 @@ class CtapKeyringDevice(ctap.CtapDevice):
             ctap2.Ctap2.CMD.GET_INFO: self.get_info,
         }
 
-        self._info = ctap2.Info.create(
-            self.SUPPORTED_CTAP_VERSIONS,
+        self._info = Info(
+            versions=self.SUPPORTED_CTAP_VERSIONS,
+            extensions=[],
             aaguid=self.AAGUID,
             options={
                 CtapOptions.PLATFORM_DEVICE: True,
                 CtapOptions.RESIDENT_KEY: True,
                 CtapOptions.USER_PRESENCE: True,
                 CtapOptions.USER_VERIFICATION: True,
+                CtapOptions.CLIENT_PIN: True,
             },
+            pin_uv_protocols=[ctap2.PinProtocolV2.VERSION],
             max_msg_size=self.MAX_MSG_SIZE,
             transports=[webauthn.AuthenticatorTransport.INTERNAL],
             algorithms=cose.CoseKey.supported_algorithms(),
@@ -99,6 +98,10 @@ class CtapKeyringDevice(ctap.CtapDevice):
 
         self._next_assertions_ctx: Optional[CtapGetNextAssertionContext] = None
         self._user_verifier = CtapUserVerifierFactory.create()
+
+    @property
+    def capabilities(self) -> int:
+        return hid.CAPABILITY.CBOR
 
     @classmethod
     def list_devices(cls):
@@ -117,7 +120,7 @@ class CtapKeyringDevice(ctap.CtapDevice):
         # noinspection PyBroadException
         try:
             res = self._call(cmd, data, event, on_keepalive)
-            return self._wrap_err_code(CtapError.ERR.SUCCESS) + res
+            return self._wrap_err_code(CtapError.ERR.SUCCESS) + cbor.encode(res)
         except CtapError as e:
             return self._wrap_err_code(e.code)
         except Exception:
@@ -147,7 +150,7 @@ class CtapKeyringDevice(ctap.CtapDevice):
 
         # noinspection PyBroadException
         try:
-            ctap2_req: dict = cbor.decode(data[1:])
+            ctap2_req: Mapping[Any, Any] = cbor.decode(data[1:])
         except Exception:
             raise CtapError(CtapError.ERR.INVALID_CBOR)
 
@@ -161,10 +164,10 @@ class CtapKeyringDevice(ctap.CtapDevice):
     def _wrap_err_code(err: CtapError.ERR) -> bytes:
         return err.to_bytes(1, 'big')
 
-    def get_info(self) -> ctap2.Info:
+    def get_info(self) -> Info:
         return self._info
 
-    def make_credential(self, make_credential_request: dict) -> AttestationObject:
+    def make_credential(self, make_credential_request: dict) -> AttestationResponse:
         # noinspection PyBroadException
         request = CtapMakeCredentialRequest.create(make_credential_request)
         if (
@@ -189,10 +192,10 @@ class CtapKeyringDevice(ctap.CtapDevice):
         )
 
         attestation_statement = {'alg': cred.algorithm, 'sig': signature}
-        attestation_object = AttestationObject.create(
+        attestation_response = AttestationResponse(
             PackedAttestation.FORMAT, authenticator_data, attestation_statement
         )
-        return attestation_object
+        return attestation_response
 
     @classmethod
     def _create_credential(cls, request: CtapMakeCredentialRequest) -> Credential:
@@ -343,12 +346,18 @@ class CtapKeyringDevice(ctap.CtapDevice):
         signature = self._generate_signature(
             authenticator_data, request.client_data_hash, cred.private_key
         )
-        response = AssertionResponse.create(
-            PublicKeyCredentialDescriptor(PublicKeyCredentialType.PUBLIC_KEY, cred.id),
+        response = AssertionResponse(
+            PublicKeyCredentialDescriptor(
+                PublicKeyCredentialType.PUBLIC_KEY,
+                cred.id,
+                transports=[webauthn.AuthenticatorTransport.INTERNAL],
+            ).__dict__,
             authenticator_data,
             signature,
-            user=PublicKeyCredentialUserEntity(cred.user_id, name=''),
-            n_creds=len(ctx.creds),
+            user=PublicKeyCredentialUserEntity(
+                name='', id=cred.user_id.encode('utf-8'), display_name=''
+            ).__dict__,
+            number_of_credentials=len(ctx.creds),
         )
         return response
 

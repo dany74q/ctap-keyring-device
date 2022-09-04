@@ -3,7 +3,7 @@ from ctap_keyring_device.user_verifiers.ctap_user_verifier import CtapUserVerifi
 
 
 class NoopCtapUserVerifier(CtapUserVerifierBase):
-    """ Dummy verifier - always returns true """
+    """Dummy verifier - always returns true"""
 
     def _available(self) -> bool:
         return True
