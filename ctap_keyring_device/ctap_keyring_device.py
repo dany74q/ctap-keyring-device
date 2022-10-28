@@ -79,6 +79,10 @@ class CtapKeyringDevice(ctap.CtapDevice):
             ctap2.Ctap2.CMD.GET_INFO: self.get_info,
         }
 
+        algorithms = []
+        for i in cose.CoseKey.supported_algorithms():
+            algorithms.append({'type': 'public-key', 'alg': i})
+
         self._info = Info(
             versions=self.SUPPORTED_CTAP_VERSIONS,
             extensions=[],
@@ -93,7 +97,7 @@ class CtapKeyringDevice(ctap.CtapDevice):
             pin_uv_protocols=[ctap2.PinProtocolV2.VERSION],
             max_msg_size=self.MAX_MSG_SIZE,
             transports=[webauthn.AuthenticatorTransport.INTERNAL],
-            algorithms=cose.CoseKey.supported_algorithms(),
+            algorithms=algorithms,
         )
 
         self._next_assertions_ctx: Optional[CtapGetNextAssertionContext] = None
